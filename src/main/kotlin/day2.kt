@@ -1,46 +1,68 @@
 fun day2result() {
     val sum = input.sumOf {
+
         val data = extractGameData(it)
         val gameId = data.first
         val gameData = data.second
-        if (checkCriteria(gameData)) {
-            gameId
-        } else {
-            0
-        }
+
+        getMinimalSet(gameData).power()
     }
 
     println("sum: $sum")
 }
 
-data class Criteria(
-    val blue: Int = 14,
-    val green: Int = 13,
-    val red: Int = 12,
-)
+data class GameSet(
+    val blue: Int,
+    val green: Int,
+    val red: Int,
+) {
+    fun power(): Int {
+        return blue * green * red
+    }
+}
 
-private fun extractGameData(input: String): Pair<Int, List<List<Pair<String, Int>>>> {
+val criteria = GameSet(14, 13, 12)
+
+private fun extractGameData(input: String): Pair<Int, List<GameSet>> {
     val gameRegex = Regex("Game (\\d+): (.*)")
     val gameId = gameRegex.find(input)!!.groupValues[1].toInt()
     val gameData = gameRegex.find(input)!!.groupValues[2].split(";")
     val gameDataRegex = Regex("(\\d+) (red|blue|green)")
-    val gameDataList = gameData.map { set -> gameDataRegex.findAll(set).map { it.groupValues[2] to it.groupValues[1].toInt() }.toList() }
+    val gameDataList = gameData.map { set -> gameDataRegex.findAll(set).map { it.groupValues[2] to it.groupValues[1].toInt() }.toList().toGameSet() }
 
     return gameId to gameDataList
 }
 
-private fun checkCriteria(gameData: List<List<Pair<String, Int>>>): Boolean {
-    return gameData.all { set ->
-        val criteria = Criteria()
-        set.all { (color, number) ->
-            when (color) {
-                "red" -> criteria.red >= number
-                "blue" -> criteria.blue >= number
-                "green" -> criteria.green >= number
-                else -> false
-            }
-        }
+private fun List<Pair<String, Int>>.toGameSet(): GameSet {
+    return GameSet(
+        blue = this.firstOrNull { it.first == "blue" }?.second ?: 0,
+        green = this.firstOrNull { it.first == "green" }?.second ?: 0,
+        red = this.firstOrNull { it.first == "red" }?.second ?: 0,
+    )
+}
+
+private fun checkCriteria(gameData: List<GameSet>): Boolean {
+    return gameData.all { gameSet ->
+        gameSet.blue <= criteria.blue &&
+        gameSet.green <= criteria.green &&
+        gameSet.red <= criteria.red
     }
+}
+
+private fun getMinimalSet(gameData: List<GameSet>): GameSet {
+
+    var result = GameSet(0, 0, 0)
+    gameData.forEach { gameSet ->
+        result = GameSet(
+            blue = maxOf(result.blue, gameSet.blue),
+            green = maxOf(result.green, gameSet.green),
+            red = maxOf(result.red, gameSet.red),
+        )
+    }
+
+    println("Minimal GameSet: $result")
+
+    return result
 }
 
 private val input = listOf("Game 1: 4 red, 5 blue, 9 green; 7 green, 7 blue, 3 red; 16 red, 7 blue, 3 green; 11 green, 11 blue, 6 red; 12 red, 14 blue",
